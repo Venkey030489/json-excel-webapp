@@ -1,18 +1,12 @@
 import os
 import json
 import csv
-import threading
 from collections import defaultdict
 import pandas as pd
 from tqdm import tqdm
-from tkinter import filedialog, messagebox
-import ttkbootstrap as tb
-from ttkbootstrap.constants import *
 from openpyxl import load_workbook
 from openpyxl.styles import PatternFill, Alignment, Border, Side, Font
-from openpyxl.utils import get_column_letter
 
-# ------------------------ JSON CLEAN PARSER ------------------------ #
 def clean_and_parse_json_string(json_string_raw):
     clean_string = json_string_raw.strip()
     first_brace_index = clean_string.find('{')
@@ -24,7 +18,6 @@ def clean_and_parse_json_string(json_string_raw):
     except json.JSONDecodeError:
         return None
 
-# ------------------------ DATA EXTRACTION ------------------------ #
 def extract_excel_data(json_data, filename):
     extracted_rows = []
     step_counts_for_file = defaultdict(int)
@@ -80,7 +73,6 @@ def extract_step_number(step_text):
     except:
         return None
 
-# ------------------------ MAIN PROCESS ------------------------ #
 def process_all(input_folder, output_csv, output_excel, skip_excel=False):
     all_data = []
     step_totals = defaultdict(int)
@@ -118,7 +110,7 @@ def process_all(input_folder, output_csv, output_excel, skip_excel=False):
                         step_totals[lvl] += cnt
 
     if not all_data:
-        messagebox.showerror("No Data", "No valid JSON data found.")
+        print("❌ No valid JSON data found.")
         return
 
     os.makedirs(os.path.dirname(output_csv), exist_ok=True)
@@ -128,7 +120,7 @@ def process_all(input_folder, output_csv, output_excel, skip_excel=False):
         writer.writerows(all_data)
 
     if skip_excel:
-        messagebox.showinfo("Done", "CSV created. Excel generation skipped.")
+        print("✅ CSV created. Excel generation skipped.")
         return
 
     df = pd.read_csv(output_csv)
@@ -206,108 +198,4 @@ def process_all(input_folder, output_csv, output_excel, skip_excel=False):
         ws2.column_dimensions[col[0].column_letter].width = width + 2
 
     wb.save(output_excel)
-    messagebox.showinfo("✅ Done", f"Excel saved at:\n{output_excel}")
-
-# ------------------------ GUI ------------------------ #
-import ttkbootstrap as tb
-from tkinter import filedialog, messagebox
-import threading
-import os
-
-def run_gui():
-    def browse_input():
-        folder = filedialog.askdirectory()
-        if folder:
-            input_var.set(folder)
-
-    def browse_output():
-        file = filedialog.asksaveasfilename(defaultextension=".xlsx", filetypes=[("Excel files", "*.xlsx")])
-        if file:
-            output_var.set(file)
-
-    def start_processing():
-        if not input_var.get() or not output_var.get():
-            messagebox.showwarning("Missing Fields", "Please select both input folder and output Excel file.")
-            return
-        status_var.set("Processing...")
-        csv_path = os.path.splitext(output_var.get())[0] + ".csv"
-        threading.Thread(target=lambda: process_wrapper(input_var.get(), csv_path, output_var.get(), skip_var.get())).start()
-
-    def process_wrapper(input_path, csv_path, excel_path, skip_excel):
-        try:
-            process_all(input_path, csv_path, excel_path, skip_excel)
-            status_var.set("✅ Done.")
-        except Exception as e:
-            status_var.set(f"❌ Error: {str(e)}")
-
-    # UI Setup
-    app = tb.Window(themename="cosmo")
-    app.title("🧩 Activity Cumulative Report Generator")
-    app.geometry("1200x420")
-    app.resizable(False, False)
-    light_pink = "#ffe6f0"
-    app.configure(bg=light_pink)
-
-    input_var = tb.StringVar()
-    output_var = tb.StringVar()
-    skip_var = tb.BooleanVar()
-    status_var = tb.StringVar()
-
-    tb.Label(app, text="Activity Cumulative Report Generator", font=("Segoe UI", 16, "bold"), background=light_pink).pack(pady=15)
-
-    frm = tb.Frame(app, padding=(20, 10), bootstyle="light")
-    frm.pack(fill="both", expand=True, padx=30)
-
-    # Input folder
-    tb.Label(frm, text="📁 Input Folder:", font=("Segoe UI", 11), background=light_pink).grid(row=0, column=0, sticky="w", pady=10)
-    tb.Entry(frm, textvariable=input_var, width=55).grid(row=0, column=1, padx=10)
-    tb.Button(frm, text="📂 Browse Folder", bootstyle="warning-gradient", width=18, command=browse_input).grid(row=0, column=2)
-
-    # Output file
-    tb.Label(frm, text="📄 Output Excel:", font=("Segoe UI", 11), background=light_pink).grid(row=1, column=0, sticky="w", pady=10)
-    tb.Entry(frm, textvariable=output_var, width=55).grid(row=1, column=1, padx=10)
-    tb.Button(frm, text="💾 Save As", bootstyle="info-gradient", width=18, command=browse_output).grid(row=1, column=2)
-
-    # Skip Excel checkbox
-    tb.Checkbutton(frm, text="Skip Excel Generation", variable=skip_var, bootstyle="round-toggle").grid(row=2, column=1, sticky="w", pady=5)
-
-    # Start button
-    tb.Button(app, text="🚀 Start Processing", bootstyle="success-gradient", width=25, command=start_processing).pack(pady=20)
-
-    # Status label
-    tb.Label(app, textvariable=status_var, font=("Segoe UI", 10), background=light_pink, foreground="gray").pack(pady=10)
-
- # Footer with logo and your name
-    footer = tb.Frame(app, bootstyle="light", padding=(10, 5))
-    footer.pack(side="bottom", fill="x")
-
-    from PIL import Image, ImageTk
-
-    try:
-        logo_path = "logo.png"  # Ensure the logo file is in the same folder as your script
-        logo_img = Image.open(logo_path)
-        logo_img = logo_img.resize((100, 30), Image.Resampling.LANCZOS)
-        logo_tk = ImageTk.PhotoImage(logo_img)
-        logo_label = tb.Label(footer, image=logo_tk, background="#ffe6f0")
-        logo_label.image = logo_tk  # Prevent garbage collection
-        logo_label.pack(side="right", padx=10)
-    except Exception as e:
-        print(f"Logo load failed: {e}")
-
-    # Developer name on the right
-    name_label = tb.Label(
-        footer,
-        text="Tool Created by, HPT - Venkatraman E",
-        font=("Segoe UI", 7, "bold"),
-        background="#ffe6f0",
-        anchor="e"
-    )
-    name_label.pack(side="right", padx=15)
-    app.mainloop()
-
-
-
-
-
-if __name__ == "__main__":
-    run_gui()
+    print(f"✅ Excel saved at: {output_excel}")
