@@ -88,21 +88,56 @@
     </footer>
 
     <script>
-        document.getElementById("fileInput").addEventListener("change", function() {
-            const files = this.files;
-            const list = Array.from(files).map(f => `<li>${f.name}</li>`).join("");
-            document.getElementById("fileList").innerHTML = `<ul>${list}</ul>`;
-        });
+    document.getElementById("fileInput").addEventListener("change", function () {
+        const files = this.files;
+        const list = Array.from(files).map(f => `<li>${f.name}</li>`).join("");
+        document.getElementById("fileList").innerHTML = `<ul>${list}</ul>`;
+    });
 
-        document.getElementById("uploadForm").addEventListener("submit", function() {
-            document.getElementById("submitBtn").disabled = true;
-            document.getElementById("loading").style.display = "block";
-            document.getElementById("progressBar").style.display = "block";
-        });
+    document.getElementById("uploadForm").addEventListener("submit", function (e) {
+        e.preventDefault();  // prevent default form submission
+        const form = e.target;
+        const formData = new FormData(form);
 
-        document.getElementById("darkSwitch").addEventListener("change", function() {
-            document.body.classList.toggle("dark-mode", this.checked);
+        // UI updates
+        document.getElementById("submitBtn").disabled = true;
+        document.getElementById("loading").style.display = "block";
+        document.getElementById("progressBar").style.display = "block";
+
+        // Send AJAX request instead of full form submission
+        fetch("/", {
+            method: "POST",
+            body: formData
+        }).then(response => {
+            if (!response.ok) throw new Error("Failed to process files");
+            return response.blob(); // get the Excel file
+        }).then(blob => {
+            // Create download link
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = "cumulative_output.xlsx";
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+
+            // Reset UI
+            document.getElementById("loading").style.display = "none";
+            document.getElementById("progressBar").style.display = "none";
+            document.getElementById("submitBtn").disabled = false;
+            document.getElementById("submitBtn").innerHTML = "✅ Done! Convert Again";
+        }).catch(err => {
+            alert("❌ Something went wrong: " + err.message);
+            document.getElementById("loading").style.display = "none";
+            document.getElementById("progressBar").style.display = "none";
+            document.getElementById("submitBtn").disabled = false;
         });
-    </script>
+    });
+
+    document.getElementById("darkSwitch").addEventListener("change", function () {
+        document.body.classList.toggle("dark-mode", this.checked);
+    });
+</script>
+
 </body>
 </html>
