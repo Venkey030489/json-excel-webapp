@@ -1,7 +1,7 @@
 from flask import Flask, render_template, request, send_file
 import os
 from werkzeug.utils import secure_filename
-from processor import process_all  # ✅ Replace 'your_script' with your actual script name (e.g., processor.py)
+from your_script import process_all  # ✅ Replace 'your_script' with your actual script name (e.g., processor.py)
 
 app = Flask(__name__)
 
